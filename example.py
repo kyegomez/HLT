@@ -1,4 +1,4 @@
-from hlt.model import HLTransformer, MaxViT
+from hlt_torch.model import HLTransformer, MaxViT
 import torch
 
 vit = MaxViT(
