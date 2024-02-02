@@ -1,24 +1,18 @@
-import torch
-from torch import nn, Tensor
-from zeta.nn import FeedForward
+from typing import Callable, List, Optional, Tuple
 
 import torch
 import torch.nn.functional as F
-from torch import nn, einsum, Tensor
-
-from typing import List, Optional, Callable, Tuple
 from beartype import beartype
-
-from einops import pack, unpack, repeat, reduce, rearrange
-from einops.layers.torch import Rearrange, Reduce
-
-from functools import partial
-
 from classifier_free_guidance_pytorch import (
-    TextConditioner,
     AttentionTextConditioner,
+    TextConditioner,
     classifier_free_guidance,
 )
+from einops import pack, rearrange, reduce, repeat, unpack
+from einops.layers.torch import Rearrange, Reduce
+from torch import Tensor, einsum, nn
+from zeta.nn import Residual
+
 
 # helpers
 
@@ -59,15 +53,6 @@ def posemb_sincos_1d(
 
 
 # helper classes
-
-
-class Residual(nn.Module):
-    def __init__(self, fn):
-        super().__init__()
-        self.fn = fn
-
-    def forward(self, x):
-        return self.fn(x) + x
 
 
 class LayerNorm(nn.Module):
@@ -522,7 +507,7 @@ class TransformerAttention(nn.Module):
         attn_mask=None,
         cond_fn: Optional[Callable] = None,
     ):
-        b = x.shape[0]
+        x.shape[0]
 
         if exists(context):
             context = self.context_norm(context)
@@ -832,6 +817,17 @@ class HLTransformer(nn.Module):
 
 
 class StatePolicy(nn.Module):
+    """
+    Initializes the StatePolicy module.
+
+    Args:
+        dim (int): The input dimension.
+        dropout (int): The dropout rate.
+        mult (int, optional): The multiplier for the hidden dimension. Defaults to 4.
+        *args: Variable length argument list.
+        **kwargs: Arbitrary keyword arguments.
+    """
+
     def __init__(
         self,
         dim: int = 512,
@@ -840,25 +836,11 @@ class StatePolicy(nn.Module):
         *args,
         **kwargs,
     ):
-        """
-        Initializes the StatePolicy module.
-
-        Args:
-            dim (int): The input dimension.
-            dropout (int): The dropout rate.
-            mult (int, optional): The multiplier for the hidden dimension. Defaults to 4.
-            *args: Variable length argument list.
-            **kwargs: Arbitrary keyword arguments.
-        """
         super().__init__()
         self.dim = dim
         self.dropout = dropout
 
-        self.ffn = FeedForward(
-            dim,
-            mult,
-            dropout=dropout
-        )
+        self.ffn = FeedForward(dim, mult, dropout=dropout)
 
     def forward(self, x: Tensor):
         """
@@ -871,6 +853,3 @@ class StatePolicy(nn.Module):
             Tensor: The output tensor.
         """
         return self.ffn(x)
-
-
-
