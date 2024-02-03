@@ -1,4 +1,4 @@
-from hlt_torch.model import HLTransformer, StatePolicy
+from hlt_torch.model import HLT, StatePolicy
 
 
-__all__ = ["HLTransformer", "StatePolicy"]
+__all__ = ["HLT", "StatePolicy"]

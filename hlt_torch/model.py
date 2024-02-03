@@ -853,3 +853,77 @@ class StatePolicy(nn.Module):
             Tensor: The output tensor.
         """
         return self.ffn(x)
+
+
+class HLT(torch.nn.Module):
+    def __init__(
+        self,
+        num_classes: int,
+        dim_conv_stem: int,
+        dim: int,
+        dim_head: int,
+        depth: Tuple[int],
+        window_size: int,
+        mbconv_expansion_rate: int,
+        mbconv_shrinkage_rate: int,
+        dropout: float,
+        num_actions: int,
+        hl_depth: int,
+        hl_heads: int,
+        hl_dim_head: int,
+        cond_drop_prob: float,
+    ):
+        """
+        Initializes the MaxViTWithHLTransformer module.
+
+        Args:
+            num_classes (int): The number of output classes.
+            dim_conv_stem (int): The dimension of the convolutional stem.
+            dim (int): The dimension of the transformer.
+            dim_head (int): The dimension of each transformer head.
+            depth (int): The depth of the transformer.
+            window_size (int): The window size for the transformer.
+            mbconv_expansion_rate (int): The expansion rate for the MBConv blocks.
+            mbconv_shrinkage_rate (int): The shrinkage rate for the MBConv blocks.
+            dropout (float): The dropout rate.
+            num_actions (int): The number of actions.
+            hl_depth (int): The depth of the HLTransformer.
+            hl_heads (int): The number of heads in the HLTransformer.
+            hl_dim_head (int): The dimension of each head in the HLTransformer.
+            cond_drop_prob (float): The conditional dropout probability.
+        """
+        super(HLT, self).__init__()
+
+        self.vit = MaxViT(
+            num_classes=num_classes,
+            dim_conv_stem=dim_conv_stem,
+            dim=dim,
+            dim_head=dim_head,
+            depth=depth,
+            window_size=window_size,
+            mbconv_expansion_rate=mbconv_expansion_rate,
+            mbconv_shrinkage_rate=mbconv_shrinkage_rate,
+            dropout=dropout,
+        )
+
+        self.hl_transformer = HLTransformer(
+            vit=self.vit,
+            num_actions=num_actions,
+            depth=hl_depth,
+            heads=hl_heads,
+            dim_head=hl_dim_head,
+            cond_drop_prob=cond_drop_prob,
+        )
+
+    def forward(self, video: Tensor, instructions: Tensor) -> Tensor:
+        """
+        Performs a forward pass of the MaxViTWithHLTransformer module.
+
+        Args:
+            video (Tensor): The input video tensor.
+            instructions (Tensor): The input instructions tensor.
+
+        Returns:
+            Tensor: The output tensor.
+        """
+        return self.hl_transformer(video, instructions)
