@@ -13,7 +13,6 @@ from einops.layers.torch import Rearrange, Reduce
 from torch import Tensor, einsum, nn
 from zeta.nn import Residual
 
-
 # helpers
 
 
@@ -40,9 +39,7 @@ def unpack_one(x, ps, pattern):
 # sinusoidal positions
 
 
-def posemb_sincos_1d(
-    seq, dim, temperature=10000, device=None, dtype=torch.float32
-):
+def posemb_sincos_1d(seq, dim, temperature=10000, device=None, dtype=torch.float32):
     n = torch.arange(seq, device=device)
     omega = torch.arange(dim // 2, device=device) / (dim // 2 - 1)
     omega = 1.0 / (temperature**omega)
@@ -134,9 +131,7 @@ class Dropsample(nn.Module):
             return x
 
         keep_mask = (
-            torch.FloatTensor(
-                (x.shape[0], 1, 1, 1), device=device
-            ).uniform_()
+            torch.FloatTensor((x.shape[0], 1, 1, 1), device=device).uniform_()
             > self.prob
         )
         return x * keep_mask / (1 - self.prob)
@@ -203,13 +198,9 @@ class Attention(nn.Module):
 
         self.to_qkv = nn.Linear(dim, dim * 3, bias=False)
 
-        self.mem_kv = nn.Parameter(
-            torch.randn(2, self.heads, num_mem_kv, dim_head)
-        )
+        self.mem_kv = nn.Parameter(torch.randn(2, self.heads, num_mem_kv, dim_head))
 
-        self.attend = nn.Sequential(
-            nn.Softmax(dim=-1), nn.Dropout(dropout)
-        )
+        self.attend = nn.Sequential(nn.Softmax(dim=-1), nn.Dropout(dropout))
 
         self.to_out = nn.Sequential(
             nn.Linear(dim, dim, bias=False), nn.Dropout(dropout)
@@ -217,9 +208,7 @@ class Attention(nn.Module):
 
         # relative positional bias
 
-        self.rel_pos_bias = nn.Embedding(
-            (2 * window_size - 1) ** 2, self.heads
-        )
+        self.rel_pos_bias = nn.Embedding((2 * window_size - 1) ** 2, self.heads)
 
         pos = torch.arange(window_size)
         grid = torch.stack(torch.meshgrid(pos, pos, indexing="ij"))
@@ -228,13 +217,9 @@ class Attention(nn.Module):
             grid, "j ... -> 1 j ..."
         )
         rel_pos += window_size - 1
-        rel_pos_indices = (
-            rel_pos * torch.tensor([2 * window_size - 1, 1])
-        ).sum(dim=-1)
+        rel_pos_indices = (rel_pos * torch.tensor([2 * window_size - 1, 1])).sum(dim=-1)
 
-        self.register_buffer(
-            "rel_pos_indices", rel_pos_indices, persistent=False
-        )
+        self.register_buffer("rel_pos_indices", rel_pos_indices, persistent=False)
 
     def forward(self, x):
         (
@@ -312,9 +297,7 @@ class Attention(nn.Module):
         # combine heads out
 
         out = self.to_out(out)
-        return rearrange(
-            out, "(b x y) ... -> b x y ...", x=height, y=width
-        )
+        return rearrange(out, "(b x y) ... -> b x y ...", x=height, y=width)
 
 
 class MaxViT(nn.Module):
@@ -343,9 +326,7 @@ class MaxViT(nn.Module):
         dim_conv_stem = default(dim_conv_stem, dim)
 
         self.conv_stem = nn.Sequential(
-            nn.Conv2d(
-                channels, dim_conv_stem, 3, stride=2, padding=1
-            ),
+            nn.Conv2d(channels, dim_conv_stem, 3, stride=2, padding=1),
             nn.Conv2d(dim_conv_stem, dim_conv_stem, 3, padding=1),
         )
 
@@ -398,9 +379,7 @@ class MaxViT(nn.Module):
                             window_size=w,
                         )
                     ),
-                    Residual(
-                        FeedForward(dim=layer_dim, dropout=dropout)
-                    ),
+                    Residual(FeedForward(dim=layer_dim, dropout=dropout)),
                     Rearrange("b x y w1 w2 d -> b d (x w1) (y w2)"),
                     Rearrange(
                         "b d (w1 x) (w2 y) -> b x y w1 w2 d",
@@ -415,9 +394,7 @@ class MaxViT(nn.Module):
                             window_size=w,
                         )
                     ),
-                    Residual(
-                        FeedForward(dim=layer_dim, dropout=dropout)
-                    ),
+                    Residual(FeedForward(dim=layer_dim, dropout=dropout)),
                     Rearrange("b x y w1 w2 d -> b d (w1 x) (w2 y)"),
                 )
 
@@ -486,9 +463,7 @@ class TransformerAttention(nn.Module):
         dim_context = default(dim_context, dim)
 
         self.norm = LayerNorm(dim)
-        self.context_norm = (
-            LayerNorm(dim_context) if norm_context else nn.Identity()
-        )
+        self.context_norm = LayerNorm(dim_context) if norm_context else nn.Identity()
 
         self.attn_dropout = nn.Dropout(dropout)
 
@@ -532,9 +507,7 @@ class TransformerAttention(nn.Module):
             sim = sim + attn_bias
 
         if exists(attn_mask):
-            sim = sim.masked_fill(
-                ~attn_mask, -torch.finfo(sim.dtype).max
-            )
+            sim = sim.masked_fill(~attn_mask, -torch.finfo(sim.dtype).max)
 
         if exists(mask):
             mask = rearrange(mask, "b j -> b 1 1 j")
@@ -542,12 +515,10 @@ class TransformerAttention(nn.Module):
 
         if self.causal:
             i, j = sim.shape[-2:]
-            causal_mask = torch.ones(
-                (i, j), dtype=torch.bool, device=x.device
-            ).triu(j - i + 1)
-            sim = sim.masked_fill(
-                causal_mask, -torch.finfo(sim.dtype).max
+            causal_mask = torch.ones((i, j), dtype=torch.bool, device=x.device).triu(
+                j - i + 1
             )
+            sim = sim.masked_fill(causal_mask, -torch.finfo(sim.dtype).max)
 
         attn = sim.softmax(dim=-1)
         attn = self.attn_dropout(attn)
@@ -613,9 +584,7 @@ class TokenLearner(nn.Module):
     using the 1.1 version with the MLP (2 dense layers with gelu) for generating attention map
     """
 
-    def __init__(
-        self, *, dim, ff_mult=2, num_output_tokens=8, num_layers=2
-    ):
+    def __init__(self, *, dim, ff_mult=2, num_output_tokens=8, num_layers=2):
         super().__init__()
         inner_dim = dim * ff_mult * num_output_tokens
 
@@ -638,15 +607,11 @@ class TokenLearner(nn.Module):
 
     def forward(self, x):
         x, ps = pack_one(x, "* c h w")
-        x = repeat(
-            x, "b c h w -> b (g c) h w", g=self.num_output_tokens
-        )
+        x = repeat(x, "b c h w -> b (g c) h w", g=self.num_output_tokens)
         attn = self.net(x)
 
         attn = rearrange(attn, "b g h w -> b 1 g h w")
-        x = rearrange(
-            x, "b (g c) h w -> b c g h w", g=self.num_output_tokens
-        )
+        x = rearrange(x, "b (g c) h w -> b c g h w", g=self.num_output_tokens)
 
         x = reduce(x * attn, "b c g h w -> b c g", "mean")
         x = unpack_one(x, ps, "* c n")
@@ -672,7 +637,7 @@ class HLTransformer(nn.Module):
         token_learner_num_output_tokens=8,
         cond_drop_prob=0.2,
         use_attn_conditioner=False,
-        conditioner_kwargs: dict = dict(),
+        conditioner_kwargs: dict = {},
     ):
         super().__init__()
         self.vit = vit
@@ -680,9 +645,7 @@ class HLTransformer(nn.Module):
         self.num_vit_stages = len(vit.cond_hidden_dims)
 
         conditioner_klass = (
-            AttentionTextConditioner
-            if use_attn_conditioner
-            else TextConditioner
+            AttentionTextConditioner if use_attn_conditioner else TextConditioner
         )
 
         self.conditioner = conditioner_klass(
@@ -771,15 +734,13 @@ class HLTransformer(nn.Module):
         tokens = unpack_one(tokens, packed_shape, "* c h w")
         learned_tokens = self.token_learner(tokens)
 
-        learned_tokens = rearrange(
-            learned_tokens, "b f c n -> b (f n) c"
-        )
+        learned_tokens = rearrange(learned_tokens, "b f c n -> b (f n) c")
 
         # causal attention mask
 
-        attn_mask = torch.ones(
-            (frames, frames), dtype=torch.bool, device=device
-        ).triu(1)
+        attn_mask = torch.ones((frames, frames), dtype=torch.bool, device=device).triu(
+            1
+        )
         attn_mask = repeat(
             attn_mask,
             "i j -> (i r1) (j r2)",
@@ -808,9 +769,7 @@ class HLTransformer(nn.Module):
             attn_mask=~attn_mask,
         )
 
-        pooled = reduce(
-            attended_tokens, "b (f n) d -> b f d", "mean", f=frames
-        )
+        pooled = reduce(attended_tokens, "b (f n) d -> b f d", "mean", f=frames)
 
         logits = self.to_logits(pooled)
         return logits
@@ -892,7 +851,7 @@ class HLT(torch.nn.Module):
             hl_dim_head (int): The dimension of each head in the HLTransformer.
             cond_drop_prob (float): The conditional dropout probability.
         """
-        super(HLT, self).__init__()
+        super().__init__()
 
         self.vit = MaxViT(
             num_classes=num_classes,
