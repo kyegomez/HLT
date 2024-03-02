@@ -1,4 +1,4 @@
-import torch 
+import torch
 from hlt_torch.model import HLT
 
 # Import the necessary libraries
@@ -21,8 +21,12 @@ model = HLT(
 )
 
 # Generate some dummy input tensors
-video = torch.randn(1, 3, 16, 112, 112)  # Shape: (batch_size, num_channels, num_frames, height, width)
-instructions = torch.randn(1, 10, 512)  # Shape: (batch_size, num_instructions, embedding_dim)
+video = torch.randn(
+    1, 3, 16, 112, 112
+)  # Shape: (batch_size, num_channels, num_frames, height, width)
+instructions = torch.randn(
+    1, 10, 512
+)  # Shape: (batch_size, num_instructions, embedding_dim)
 
 # Perform a forward pass through the model
 output = model(video, instructions)
